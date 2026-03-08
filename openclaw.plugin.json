@@ -1,0 +1,57 @@
+{
+  "id": "smart-routing",
+  "name": "Smart Model Routing",
+  "description": "Routes requests to different models based on prompt complexity",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": { "type": "boolean" },
+      "classifier": {
+        "type": "string",
+        "enum": ["heuristic", "llm", "hybrid"]
+      },
+      "tiers": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "fast": { "$ref": "#/$defs/tier" },
+          "standard": { "$ref": "#/$defs/tier" },
+          "heavy": { "$ref": "#/$defs/tier" }
+        }
+      },
+      "hybridConfidenceThreshold": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "$defs": {
+      "tier": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "model": { "type": "string" },
+          "patterns": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "triggers": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["model"]
+      }
+    }
+  },
+  "uiHints": {
+    "enabled": {
+      "label": "Enable Smart Routing"
+    },
+    "classifier": {
+      "label": "Classifier Mode",
+      "help": "heuristic (fast, free), llm (accurate, ~200ms), hybrid (heuristic + LLM fallback)"
+    }
+  }
+}

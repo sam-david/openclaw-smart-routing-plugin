@@ -1,0 +1,43 @@
+{
+  "name": "@openclaw/smart-routing",
+  "version": "2026.3.7",
+  "description": "Automatic complexity-based model routing for OpenClaw — route requests to the right model based on prompt complexity",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/smart-routing.git"
+  },
+  "homepage": "https://github.com/openclaw/smart-routing#readme",
+  "bugs": {
+    "url": "https://github.com/openclaw/smart-routing/issues"
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "model-routing",
+    "smart-routing",
+    "llm",
+    "cost-optimization"
+  ],
+  "openclaw": {
+    "extensions": ["./index.ts"]
+  },
+  "files": [
+    "index.ts",
+    "src/",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "devDependencies": {
+    "openclaw": "*",
+    "vitest": "^4.0.0"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}
