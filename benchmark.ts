@@ -66,15 +66,22 @@ const PROMPTS: { label: string; text: string; estimatedTokens: number }[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Routing config (matches the standard 3-tier setup)
+// Routing config (mirrors live openclaw.json config)
 // ---------------------------------------------------------------------------
 const ROUTING_CONFIG: SmartRoutingConfig = {
   enabled: true,
-  classifier: "heuristic",
+  classifier: "hybrid",
+  hybridConfidenceThreshold: 0.75,
   tiers: {
-    fast: { model: "anthropic/claude-haiku-4-5" },
+    fast: {
+      model: "anthropic/claude-haiku-4-5",
+      patterns: ["greeting", "status", "weather", "time", "date"],
+    },
     standard: { model: "anthropic/claude-sonnet-4-6" },
-    heavy: { model: "anthropic/claude-opus-4-6" },
+    heavy: {
+      model: "anthropic/claude-opus-4-6",
+      triggers: ["refactor", "architect", "restructure", "rewrite", "migrate", "redesign"],
+    },
   },
 };
 
