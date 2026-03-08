@@ -54,7 +54,7 @@ describe("resolveSmartRoute", () => {
     it("resolves heavy tier model for complex prompts", async () => {
       const result = await resolveSmartRoute({
         prompt:
-          "Refactor the entire authentication module to use OAuth2. First analyze the current implementation, then design the new architecture, and finally implement the changes across all affected files.",
+          "Refactor the entire authentication module to use OAuth2. First analyze the current implementation, then restructure the auth layer, and finally implement the changes.\n1. Read current auth code\n2. Design new OAuth2 flow\n3. Migrate all endpoints",
         routingConfig: fullConfig,
       });
       expect(result).not.toBeNull();

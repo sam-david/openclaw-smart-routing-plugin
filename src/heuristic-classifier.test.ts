@@ -50,6 +50,30 @@ describe("classifyWithHeuristics", () => {
     });
   });
 
+  describe("standard tier — single complex verbs", () => {
+    it("classifies a single standard verb as standard, not heavy", () => {
+      const result = classifyWithHeuristics({
+        prompt: "Debug this CSS alignment issue in the navbar",
+      });
+      expect(result.tier).toBe("standard");
+    });
+
+    it("classifies review requests as standard", () => {
+      const result = classifyWithHeuristics({
+        prompt: "Review this function and tell me if there are any issues",
+      });
+      expect(result.tier).toBe("standard");
+    });
+
+    it("classifies single heavy verb without other signals as ambiguous (low confidence)", () => {
+      const result = classifyWithHeuristics({
+        prompt: "Refactor this function to be more readable",
+      });
+      // Single heavy verb scores in both standard and heavy — low confidence
+      expect(result.confidence).toBeLessThan(0.8);
+    });
+  });
+
   describe("heavy tier", () => {
     it("classifies multi-step instructions as heavy", () => {
       const result = classifyWithHeuristics({
@@ -59,10 +83,10 @@ describe("classifyWithHeuristics", () => {
       expect(result.tier).toBe("heavy");
     });
 
-    it("classifies complex task verbs as heavy", () => {
+    it("classifies heavy verbs combined with multi-step language as heavy", () => {
       const result = classifyWithHeuristics({
         prompt:
-          "Refactor the entire authentication module to use OAuth2 instead of API keys. This requires restructuring the auth profiles.",
+          "Refactor the entire authentication module to use OAuth2 instead of API keys. First analyze the current implementation, then restructure the auth profiles, and finally update all the tests.",
       });
       expect(result.tier).toBe("heavy");
     });
@@ -94,6 +118,14 @@ describe("classifyWithHeuristics", () => {
       const result = classifyWithHeuristics({
         prompt:
           "How does the model selection work? What is the fallback chain? Where are the auth profiles stored? Can we change the default provider?",
+      });
+      expect(result.tier).toBe("heavy");
+    });
+
+    it("classifies long multi-line messages with multiple questions as heavy", () => {
+      const result = classifyWithHeuristics({
+        prompt:
+          "I need help with a complex problem.\nThe application has a memory leak that grows by 50MB per hour under load.\nI've checked the WebSocket handler and the heap snapshots show retained closures.\nWhat is causing the retained references?\nHow can I trace the allocation path?\nWhere should I look for the root cause?",
       });
       expect(result.tier).toBe("heavy");
     });

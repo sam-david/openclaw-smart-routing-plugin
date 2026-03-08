@@ -6,8 +6,13 @@ const GREETING_PATTERNS =
 const SIMPLE_QUESTION_PATTERNS =
   /^(what is|what's|when is|when's|where is|where's|who is|who's|how do i|how do you|can you|could you|tell me)\b/i;
 
-const COMPLEX_VERB_PATTERNS =
-  /\b(refactor|architect|design|compare|review|debug|implement|optimize|restructure|rewrite|migrate|analyze|evaluate|benchmark)\b/i;
+// Verbs that suggest moderate complexity — Sonnet-level work
+const STANDARD_VERB_PATTERNS =
+  /\b(debug|review|implement|optimize|analyze|compare|evaluate|benchmark)\b/i;
+
+// Verbs that suggest system-level scope — Opus-level when combined with other signals
+const HEAVY_VERB_PATTERNS =
+  /\b(refactor|architect|restructure|rewrite|migrate|redesign)\b/i;
 
 const MULTI_STEP_PATTERNS =
   /\b(first\b.*\bthen\b|step\s*\d|1\.\s|2\.\s|3\.\s|\band\s+then\b|\bafter\s+that\b|\bnext\b.*\bthen\b)/is;
@@ -47,45 +52,75 @@ function scoreTiers(prompt: string, config?: SmartRoutingConfig): TierScores {
   const trimmed = prompt.trim();
   const length = trimmed.length;
 
-  const hasComplexVerbs = COMPLEX_VERB_PATTERNS.test(trimmed);
+  // Gather signals
+  const hasStandardVerbs = STANDARD_VERB_PATTERNS.test(trimmed);
+  const hasHeavyVerbs = HEAVY_VERB_PATTERNS.test(trimmed);
   const hasMultiStep = MULTI_STEP_PATTERNS.test(trimmed);
   const questionCount = countQuestions(trimmed);
   const codeBlocks = countCodeFences(trimmed);
   const hasFilePaths = FILE_PATH_RE.test(trimmed);
   const hasUrls = URL_RE.test(trimmed);
+  const hasToolRequest = TOOL_REQUEST_PATTERNS.test(trimmed);
+  const lineCount = trimmed.split("\n").length;
 
-  // Heavy signals (check first — these suppress fast signals)
-  if (hasMultiStep) scores.heavy += 5;
-  if (hasComplexVerbs) scores.heavy += 4;
+  // ---- Heavy signals ----
+  // Heavy verbs alone are ambiguous — they score in both standard and heavy
+  // so that hybrid mode can let Haiku make the final call.
+  // Only when combined with other complexity signals does heavy pull ahead.
+  if (hasHeavyVerbs) {
+    scores.heavy += 3;
+    scores.standard += 2; // ambiguous: could be either tier
+  }
+
+  // Multi-step language is a strong complexity signal
+  if (hasMultiStep) scores.heavy += 4;
+
+  // Multiple code blocks suggest comparison/review across implementations
   if (codeBlocks >= 2) scores.heavy += 3;
+
+  // Many questions suggest a deep exploration request
   if (questionCount >= 3) scores.heavy += 3;
   else if (questionCount >= 2) scores.heavy += 2;
-  if (length > 500) scores.heavy += 2;
+
+  // Long messages with multiple lines suggest detailed/scoped tasks
+  if (length > 800) scores.heavy += 3;
+  else if (length > 500) scores.heavy += 2;
+
+  // Multi-line structure (5+ lines) suggests organized, multi-part request
+  if (lineCount >= 5) scores.heavy += 2;
 
   // Config-driven patterns/triggers (applied early to inform suppression logic)
   const tiers = config?.tiers;
   if (tiers?.heavy && matchesConfigPatterns(trimmed, tiers.heavy.patterns)) scores.heavy += 5;
   if (tiers?.heavy && matchesConfigPatterns(trimmed, tiers.heavy.triggers)) scores.heavy += 5;
 
-  const hasHeavySignals = scores.heavy > 0;
+  // Heavy requires conviction: only suppress fast if heavy score is decisive (>= 5)
+  const hasStrongHeavySignals = scores.heavy >= 5;
 
-  // Standard signals
+  // ---- Standard signals ----
+  // Standard verbs (debug, review, etc.) are Sonnet-level work on their own
+  if (hasStandardVerbs) scores.standard += 3;
+
   if (codeBlocks === 1) scores.standard += 3;
   if (hasFilePaths || hasUrls) scores.standard += 2;
-  if (TOOL_REQUEST_PATTERNS.test(trimmed)) scores.standard += 2;
-  if (length > 50 && length <= 500 && !hasHeavySignals) scores.standard += 2;
+  if (hasToolRequest) scores.standard += 2;
 
-  // Fast signals — only apply when no heavy signals detected
-  if (!hasHeavySignals) {
+  // Medium-length messages without strong heavy signals → standard
+  if (length > 50 && length <= 500 && !hasStrongHeavySignals) scores.standard += 2;
+
+  // A single question with moderate length → standard
+  if (questionCount === 1 && length > 80) scores.standard += 1;
+
+  // ---- Fast signals — only apply when no strong heavy signals ----
+  if (!hasStrongHeavySignals) {
     if (GREETING_PATTERNS.test(trimmed)) scores.fast += 5;
     if (SIMPLE_QUESTION_PATTERNS.test(trimmed) && length < 100) scores.fast += 3;
-    if (length < 50) scores.fast += 3;
-    if (!hasNewlines(trimmed) && length < 80) scores.fast += 1;
-    if (codeBlocks === 0 && !hasFilePaths && !hasUrls) scores.fast += 2;
+    if (length < 50 && !hasStandardVerbs && !hasHeavyVerbs) scores.fast += 3;
+    if (!hasNewlines(trimmed) && length < 80 && !hasStandardVerbs) scores.fast += 1;
+    if (codeBlocks === 0 && !hasFilePaths && !hasUrls && !hasToolRequest) scores.fast += 2;
   }
 
-  // Config-driven patterns/triggers for fast and standard tiers
-  // (heavy tier patterns already applied above to inform suppression logic)
+  // ---- Config-driven patterns/triggers for fast and standard tiers ----
   if (tiers?.fast && matchesConfigPatterns(trimmed, tiers.fast.patterns)) scores.fast += 5;
   if (tiers?.fast && matchesConfigPatterns(trimmed, tiers.fast.triggers)) scores.fast += 5;
   if (tiers?.standard && matchesConfigPatterns(trimmed, tiers.standard.patterns))
