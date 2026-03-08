@@ -24,20 +24,33 @@ Based on the tier, the plugin overrides the model selection to route to the conf
 
 ## Installation
 
-The plugin ships as a bundled extension. Enable it by adding config to your `openclaw.yaml`:
+Install the plugin and configure it in your `openclaw.json` (at `~/.openclaw/openclaw.json`):
 
-```yaml
-plugins:
-  smart-routing:
-    enabled: true
-    classifier: heuristic
-    tiers:
-      fast:
-        model: anthropic/claude-haiku-4-5
-      standard:
-        model: anthropic/claude-sonnet-4-6
-      heavy:
-        model: anthropic/claude-opus-4-6
+```bash
+openclaw plugins install @openclaw/smart-routing
+```
+
+Then add the plugin config under `plugins.entries.smart-routing.config`:
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "smart-routing": {
+        "enabled": true,
+        "config": {
+          "enabled": true,
+          "classifier": "heuristic",
+          "tiers": {
+            "fast": { "model": "anthropic/claude-haiku-4-5" },
+            "standard": { "model": "anthropic/claude-sonnet-4-6" },
+            "heavy": { "model": "anthropic/claude-opus-4-6" }
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
 ## Configuration
@@ -83,56 +96,67 @@ Best for: the optimal balance of speed and accuracy in production.
 
 ### Minimal setup (heuristic only)
 
-```yaml
-plugins:
-  smart-routing:
-    enabled: true
-    tiers:
-      fast:
-        model: anthropic/claude-haiku-4-5
-      standard:
-        model: anthropic/claude-sonnet-4-6
-```
-
 Two tiers are enough. Simple messages route to Haiku; everything else goes to Sonnet. No heavy tier means complex tasks also use Sonnet.
+
+```json
+{
+  "enabled": true,
+  "classifier": "heuristic",
+  "tiers": {
+    "fast": { "model": "anthropic/claude-haiku-4-5" },
+    "standard": { "model": "anthropic/claude-sonnet-4-6" }
+  }
+}
+```
 
 ### Hybrid with custom patterns
 
-```yaml
-plugins:
-  smart-routing:
-    enabled: true
-    classifier: hybrid
-    hybridConfidenceThreshold: 0.7
-    tiers:
-      fast:
-        model: anthropic/claude-haiku-4-5
-        patterns: [greeting, status, weather]
-      standard:
-        model: anthropic/claude-sonnet-4-6
-      heavy:
-        model: anthropic/claude-opus-4-6
-        triggers: [reasoning, multi-tool, long-context]
-```
-
 Custom `patterns` and `triggers` let you tune classification for your specific workload. If your users frequently ask about "weather" and those are always simple lookups, add it as a fast-tier pattern.
+
+```json
+{
+  "enabled": true,
+  "classifier": "hybrid",
+  "hybridConfidenceThreshold": 0.7,
+  "tiers": {
+    "fast": {
+      "model": "anthropic/claude-haiku-4-5",
+      "patterns": ["greeting", "status", "weather"]
+    },
+    "standard": { "model": "anthropic/claude-sonnet-4-6" },
+    "heavy": {
+      "model": "anthropic/claude-opus-4-6",
+      "triggers": ["reasoning", "multi-tool", "long-context"]
+    }
+  }
+}
+```
 
 ### Multi-provider setup
 
-```yaml
-plugins:
-  smart-routing:
-    enabled: true
-    tiers:
-      fast:
-        model: openai/gpt-4o-mini
-      standard:
-        model: anthropic/claude-sonnet-4-6
-      heavy:
-        model: anthropic/claude-opus-4-6
+Mix providers across tiers. Use whichever model gives the best cost/performance ratio at each complexity level.
+
+```json
+{
+  "enabled": true,
+  "classifier": "heuristic",
+  "tiers": {
+    "fast": { "model": "openai/gpt-4o-mini" },
+    "standard": { "model": "anthropic/claude-sonnet-4-6" },
+    "heavy": { "model": "anthropic/claude-opus-4-6" }
+  }
+}
 ```
 
-Mix providers across tiers. Use whichever model gives the best cost/performance ratio at each complexity level.
+## Benchmarking
+
+Run the included benchmark script to see how smart routing would classify a set of sample prompts and estimate cost savings vs a single-model baseline:
+
+```bash
+npx tsx benchmark.ts
+```
+
+The benchmark runs a representative prompt set through the classifier, shows the tier and model each prompt routes to, and calculates estimated cost savings compared to sending everything to a single model.
 
 ## Observability
 
