@@ -4,13 +4,17 @@ Automatic complexity-based model routing for OpenClaw. Routes requests to the ri
 
 ## Why Smart Routing?
 
-Most AI workloads follow a power-law distribution: the majority of requests are simple (greetings, quick lookups, short Q&A), while only a fraction require deep reasoning or multi-step orchestration. Without smart routing, every request hits your most expensive model — burning budget on work that a smaller model handles just as well.
+Most AI workloads follow a power-law distribution: the majority of requests are simple (greetings, quick lookups, short Q&A), while only a fraction require deep reasoning or multi-step orchestration. Without smart routing, every request hits the same model regardless of complexity.
 
-**Cost reduction.** Routing simple requests to a lightweight model like Claude Haiku instead of Opus can cut per-request costs by 10-30x for those interactions. In a typical workload where 40-60% of messages are simple, this translates to significant savings with no quality loss on the tasks that matter.
+Smart routing is a **quality optimization that shifts spend to where it matters.** The cost impact depends on your setup:
 
-**Faster responses.** Smaller models have lower latency. Simple questions get answered faster when they don't wait for a heavyweight model to spin up. Users get snappier interactions for the easy stuff, and the full power of a frontier model when they actually need it.
+**If your default model is expensive (e.g., Opus):** Smart routing is a clear cost saver. Simple tasks drop to Haiku (-80%), standard tasks drop to Sonnet (-40%), and only truly complex work stays on Opus. In our benchmarks, this saves **29.5%** with no quality loss.
 
-**Quality optimization that shifts spend to where it matters.** Rather than applying the same model uniformly, smart routing invests in your most capable model only for tasks that benefit from it — multi-step refactoring, architecture design, complex reasoning. Everything else gets a model that's just as good for the job at a fraction of the cost.
+**If your default model is mid-tier (e.g., Sonnet):** Smart routing is a quality investment. Simple tasks still drop to Haiku (-67% each), but complex tasks get *upgraded* to Opus (+67% each) for better output on the work that matters most. Net cost increases ~17.6%, but you get Opus-quality refactoring, architecture design, and multi-step reasoning where the quality difference is most visible.
+
+**If you want pure savings from any baseline:** Configure only the fast and standard tiers (no heavy tier). This routes simple tasks to Haiku and keeps everything else on your default model — ~30% savings with zero quality regression.
+
+**Faster responses.** Smaller models have lower latency. Simple questions get answered faster when routed to a lightweight model, giving users snappier interactions for the easy stuff.
 
 ## How It Works
 
@@ -158,7 +162,7 @@ Run the included benchmark script to see how smart routing would classify a set 
 npx tsx benchmark.ts
 ```
 
-The benchmark runs a representative prompt set through the classifier, shows the tier and model each prompt routes to, and calculates estimated cost savings compared to sending everything to a single model.
+The benchmark runs a representative prompt set through the classifier, shows the tier and model each prompt routes to, and compares costs against two baselines (Opus and Sonnet). It shows both savings and cost increases so you can make an informed decision about your tier configuration.
 
 ## Observability
 
